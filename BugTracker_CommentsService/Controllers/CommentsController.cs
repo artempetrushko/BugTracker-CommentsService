@@ -1,0 +1,99 @@
+﻿using BugTracker_CommentsService.DAL.Abstractions;
+using BugTracker_CommentsService.Domain;
+using BugTracker_CommentsService.WebApplication.Models;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BugTracker_CommentsService.WebApplication.Controllers
+{
+    [ApiController]
+    [Route("api/v1/[controller]")]
+    public class CommentsController : ControllerBase
+    {
+        private readonly IRepository<Comment> _commentsRepository;
+
+        public CommentsController(IRepository<Comment> commentsRepository)
+        {
+            _commentsRepository = commentsRepository;
+        }
+
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<CommentResponse>> GetCommentByIdAsync(Guid id)
+        {
+            var comment = await _commentsRepository.GetByIdAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+            return new CommentResponse()
+            {
+                Id = comment.Id,
+                TaskId = comment.TaskId,
+                AuthorId = comment.AuthorId,
+                Content = comment.Content,
+                CreatedAtTime = comment.CreatedAtTime,
+                UpdatedAtTime = comment.UpdatedAtTime,
+            };
+        }
+
+        [HttpGet("taskComments/{id:guid}")]
+        public async Task<ActionResult<List<CommentResponse>>> GetAllCommentsByTaskId(Guid id)
+        {
+            var comments = await _commentsRepository.GetAllAsync();
+            var taskComments = comments
+                .Where(c => c.TaskId == id)
+                .ToList();
+            return taskComments
+                .Select(taskComment => new CommentResponse()
+                {
+                    Id = taskComment.TaskId,
+                    TaskId = taskComment.TaskId,
+                    AuthorId = taskComment.AuthorId,
+                    Content = taskComment.Content,
+                    CreatedAtTime = taskComment.CreatedAtTime,
+                    UpdatedAtTime = taskComment.UpdatedAtTime
+                })
+                .ToList();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateComment(CreateCommentRequest request)
+        {
+            var comment = new Comment()
+            {
+                Id = Guid.NewGuid(),
+                TaskId = request.TaskId,
+                AuthorId = request.AuthorId,
+                Content = request.Content,
+                CreatedAtTime = DateTime.UtcNow,
+                UpdatedAtTime = DateTime.UtcNow,
+            };
+            await _commentsRepository.AddAsync(comment);
+            await _commentsRepository.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> EditComment(Guid id, UpdateCommentRequest request)
+        {
+            var comment = await _commentsRepository.GetByIdAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+            comment.Content = request.Content;
+            comment.UpdatedAtTime = DateTime.UtcNow;
+
+            _commentsRepository.Update(comment);
+            await _commentsRepository.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteComment(Guid id)
+        {
+            await _commentsRepository.RemoveAsync(id);
+            await _commentsRepository.SaveChangesAsync();
+            return Ok();
+        }
+    }
+}
