@@ -16,6 +16,7 @@ namespace BugTracker_CommentsService.WebApplication.Controllers
             _commentsRepository = commentsRepository;
         }
 
+        //TODO: сделать xml-комменты для Swagger
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<CommentResponse>> GetCommentByIdAsync(Guid id)
         {
@@ -27,7 +28,7 @@ namespace BugTracker_CommentsService.WebApplication.Controllers
             return new CommentResponse()
             {
                 Id = comment.Id,
-                TaskId = comment.TaskId,
+                TaskId = comment.IssueId,
                 AuthorId = comment.AuthorId,
                 Content = comment.Content,
                 CreatedAtTime = comment.CreatedAtTime,
@@ -36,17 +37,17 @@ namespace BugTracker_CommentsService.WebApplication.Controllers
         }
 
         [HttpGet("taskComments/{id:guid}")]
-        public async Task<ActionResult<List<CommentResponse>>> GetAllCommentsByTaskId(Guid id)
+        public async Task<ActionResult<List<CommentResponse>>> GetAllCommentsByIssueId(Guid id)
         {
             var comments = await _commentsRepository.GetAllAsync();
             var taskComments = comments
-                .Where(c => c.TaskId == id)
+                .Where(c => c.IssueId == id)
                 .ToList();
             return taskComments
                 .Select(taskComment => new CommentResponse()
                 {
-                    Id = taskComment.TaskId,
-                    TaskId = taskComment.TaskId,
+                    Id = taskComment.IssueId,
+                    TaskId = taskComment.IssueId,
                     AuthorId = taskComment.AuthorId,
                     Content = taskComment.Content,
                     CreatedAtTime = taskComment.CreatedAtTime,
@@ -61,7 +62,7 @@ namespace BugTracker_CommentsService.WebApplication.Controllers
             var comment = new Comment()
             {
                 Id = Guid.NewGuid(),
-                TaskId = request.TaskId,
+                IssueId = request.TaskId,
                 AuthorId = request.AuthorId,
                 Content = request.Content,
                 CreatedAtTime = DateTime.UtcNow,
